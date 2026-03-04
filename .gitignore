@@ -212,4 +212,5 @@ notebooks/wandb/
 
 !vcoder/data/
 !vcoder/data/*.py
-assets/synth_samples/
+assets/synth_samples/*
+!assets/synth_samples/.gitkeep

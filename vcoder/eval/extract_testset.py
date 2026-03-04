@@ -22,20 +22,24 @@ import pandas as pd
 from PIL import Image
 from tqdm import tqdm
 
+DEFAULT_PARQUET_PATH = "../Design2Code/testset_final/data/train-00000-of-00001.parquet"
+DEFAULT_RICK_JPG = "../Design2Code/testset_final/rick.jpg"
+DEFAULT_OUTPUT_DIR = "../Design2Code/testset_final_extracted"
+
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--parquet_path",
-        default="/home/compiling-ganesh/24m0797/workspace/Design2Code/testset_final/data/train-00000-of-00001.parquet",
+        default=DEFAULT_PARQUET_PATH,
     )
     parser.add_argument(
         "--rick_jpg",
-        default="/home/compiling-ganesh/24m0797/workspace/Design2Code/testset_final/rick.jpg",
+        default=DEFAULT_RICK_JPG,
     )
     parser.add_argument(
         "--output_dir",
-        default="/home/compiling-ganesh/24m0797/workspace/Design2Code/testset_final_extracted",
+        default=DEFAULT_OUTPUT_DIR,
     )
     args = parser.parse_args()
 

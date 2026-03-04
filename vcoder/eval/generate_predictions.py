@@ -50,7 +50,7 @@ MODEL_CONFIGS: dict[str, dict] = {
     "vcoder-grpo-clip": {
         "host": "localhost",
         "port": 8001,
-        "model_id": "/home/compiling-ganesh/24m0797/workspace/vision-coder/outputs/vcoder-grpo-clip/checkpoint-500",
+        "model_id": "outputs/vcoder-grpo-clip/checkpoint-500",
         "extra_body": {},
     },
 }

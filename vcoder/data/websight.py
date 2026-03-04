@@ -19,7 +19,9 @@ SYSTEM_PROMPT = (
     "```html and ``` tags."
 )
 
-DEFAULT_CACHE_DIR = os.path.expanduser("~/workspace/vision-coder/data/websight_cache")
+DEFAULT_CACHE_DIR = os.path.expanduser(
+    os.environ.get("VCODER_WEBSIGHT_CACHE_DIR", "~/.cache/vcoder/websight_cache")
+)
 
 # Qwen3-VL: patch_size=16, merge_size=2 → factor=32
 # 128 * 28 * 28 = 100352 pixels → ~364 vision tokens

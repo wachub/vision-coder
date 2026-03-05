@@ -121,16 +121,52 @@ Generate synthetic samples first:
 python -m vcoder.data.generate_synthetic_html --num_samples 200 --output_dir assets/synth_samples
 ```
 
-Then run supervised fine-tuning on those `render.png` + `source.html` pairs:
+Create explicit train/val splits:
+
+```bash
+python -m vcoder.data.synth_html.prepare_sft_splits \
+    --source_dir assets/synth_samples \
+    --output_root outputs/synth_sft \
+    --val_ratio 0.1
+```
+
+Run supervised fine-tuning:
 
 ```bash
 python -m vcoder.pipelines.sft_training \
-    --dataset_dir assets/synth_samples \
+    --train_dataset_dir outputs/synth_sft/train \
+    --eval_dataset_dir outputs/synth_sft/val \
     --output_dir outputs/vcoder-sft-synth \
     --max_samples 200 \
+    --max_eval_samples 50 \
     --num_train_epochs 1 \
     --per_device_batch_size 1 \
     --gradient_accumulation_steps 8
+```
+
+Quickly verify improvement without a server:
+
+```bash
+# Baseline
+python -m vcoder.eval.evaluate_synthetic_html_local \
+    --dataset_dir outputs/synth_sft/val \
+    --model_id Qwen/Qwen3-VL-2B-Instruct \
+    --output_dir outputs/synth_eval/base \
+    --limit 20
+
+# SFT adapter/checkpoint
+python -m vcoder.eval.evaluate_synthetic_html_local \
+    --dataset_dir outputs/synth_sft/val \
+    --model_id Qwen/Qwen3-VL-2B-Instruct \
+    --adapter_path outputs/vcoder-sft-synth \
+    --output_dir outputs/synth_eval/sft \
+    --limit 20
+
+# Compare metrics
+python -m vcoder.eval.compare_synthetic_reports \
+    --baseline_summary outputs/synth_eval/base/summary.json \
+    --candidate_summary outputs/synth_eval/sft/summary.json \
+    --output outputs/synth_eval/compare_base_vs_sft.json
 ```
 
 ---

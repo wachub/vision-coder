@@ -8,7 +8,82 @@ from .constants import BRAND_LOGO_LABELS, BRAND_PICTURE_LABELS, BULKY_TEXT_SNIPP
 from .styles import _style_tokens
 
 
+def _sample_box_dims(rng: random.Random, kind: str, size_mode: str) -> tuple[int, int]:
+    """Sample box dimensions across wide, square, and tall aspect ratios."""
+    scale = {"sm": 0.85, "md": 1.0, "lg": 1.25}[size_mode]
+    shape = rng.choices(["wide", "square", "tall"], weights=[45, 30, 25], k=1)[0]
+
+    if kind == "logo":
+        if shape == "wide":
+            width, height = rng.randint(92, 220), rng.randint(24, 54)
+        elif shape == "square":
+            side = rng.randint(42, 94)
+            width, height = side, side
+        else:
+            width, height = rng.randint(44, 90), rng.randint(68, 150)
+    else:
+        if shape == "wide":
+            width, height = rng.randint(136, 320), rng.randint(40, 96)
+        elif shape == "square":
+            side = rng.randint(66, 162)
+            width, height = side, side
+        else:
+            width, height = rng.randint(72, 136), rng.randint(108, 228)
+
+    return max(30, int(width * scale)), max(24, int(height * scale))
+
+
+def _box_inline_style(width: int, height: int) -> str:
+    return f"width:{width}px;min-width:{width}px;height:{height}px;min-height:{height}px;"
+
+
+def _gibberish_word(rng: random.Random) -> str:
+    syllables = [
+        "ka",
+        "lo",
+        "tri",
+        "zen",
+        "mur",
+        "phi",
+        "qua",
+        "vel",
+        "nor",
+        "dak",
+        "shi",
+        "pra",
+        "lom",
+        "ver",
+        "tul",
+        "rai",
+        "mon",
+        "cyl",
+        "bri",
+        "nav",
+    ]
+    return "".join(rng.choice(syllables) for _ in range(rng.randint(2, 4)))
+
+
+def _gibberish_sentence(rng: random.Random, min_words: int = 16, max_words: int = 34) -> str:
+    words = [_gibberish_word(rng) for _ in range(rng.randint(min_words, max_words))]
+    words[0] = words[0].capitalize()
+    return " ".join(words) + rng.choice([".", ".", ";"])
+
+
+def _bulk_text_wall_html(rng: random.Random) -> str:
+    paragraphs = []
+    for _ in range(rng.randint(2, 4)):
+        sentences = [_gibberish_sentence(rng) for _ in range(rng.randint(3, 6))]
+        paragraphs.append(f"<p>{' '.join(sentences)}</p>")
+    return (
+        "<div class='text-wall'>"
+        "<div class='text-wall-kicker'>Dense Narrative</div>"
+        f"{''.join(paragraphs)}"
+        "</div>"
+    )
+
+
 def _bulk_statement_html(rng: random.Random) -> str:
+    text_wall = _bulk_text_wall_html(rng) if rng.random() < 0.75 else ""
     return (
         "<div class='split-2'>"
         "<div class='bulk-panel'>"
@@ -23,6 +98,7 @@ def _bulk_statement_html(rng: random.Random) -> str:
         f"Cross-team actions: {rng.choice(TASKS)}, {rng.choice(TASKS)}.</div>"
         "</div>"
         "</div>"
+        f"{text_wall}"
     )
 
 
@@ -101,17 +177,21 @@ def _branding_block_html(rng: random.Random, stamp_cycle: int, stamp_batch: int)
     text_mode = rng.choice(["left", "center", "justify"])
     logo_a, logo_b = rng.sample(BRAND_LOGO_LABELS, 2)
     pic_a, pic_b = rng.sample(BRAND_PICTURE_LABELS, 2)
+    logo_a_style = _box_inline_style(*_sample_box_dims(rng, "logo", size_mode))
+    logo_b_style = _box_inline_style(*_sample_box_dims(rng, "logo", size_mode))
+    pic_a_style = _box_inline_style(*_sample_box_dims(rng, "picture", size_mode))
+    pic_b_style = _box_inline_style(*_sample_box_dims(rng, "picture", size_mode))
 
     html = (
         f"<div class='branding branding--{align_mode} branding--{size_mode}'>"
         f"<div class='branding-stamp align-{text_mode}'>Cycle {stamp_cycle} / Batch {stamp_batch}</div>"
         "<div class='branding-row'>"
-        f"<div class='logo-box'>{logo_a}</div>"
-        f"<div class='logo-box'>{logo_b}</div>"
+        f"<div class='logo-box' style='{logo_a_style}'>{logo_a}</div>"
+        f"<div class='logo-box' style='{logo_b_style}'>{logo_b}</div>"
         "</div>"
         "<div class='picture-row'>"
-        f"<div class='picture-box lg'>{pic_a}</div>"
-        f"<div class='picture-box sm'>{pic_b}</div>"
+        f"<div class='picture-box' style='{pic_a_style}'>{pic_a}</div>"
+        f"<div class='picture-box' style='{pic_b_style}'>{pic_b}</div>"
         "</div>"
         "</div>"
     )
@@ -126,22 +206,19 @@ def _simple_brand_block_html(rng: random.Random) -> tuple[str, str]:
     logo_a, logo_b = rng.sample(BRAND_LOGO_LABELS, 2)
     pic = rng.choice(BRAND_PICTURE_LABELS)
     align_css = {"left": "flex-start", "center": "center", "justify": "space-between"}[align_mode]
-    size_map = {
-        "sm": (88, 30, 144, 38),
-        "md": (118, 40, 188, 50),
-        "lg": (146, 52, 232, 64),
-    }
-    logo_w, logo_h, pic_w, pic_h = size_map[size_mode]
+    logo_a_style = _box_inline_style(*_sample_box_dims(rng, "logo", size_mode))
+    logo_b_style = _box_inline_style(*_sample_box_dims(rng, "logo", size_mode))
+    pic_style = _box_inline_style(*_sample_box_dims(rng, "picture", size_mode))
 
     html = (
         f"<div class='simple-brand align-{text_mode}'>"
         f"<div class='simple-brand-stamp'>Cycle {rng.randint(100, 999)} / Batch {rng.randint(10, 99)}</div>"
         f"<div class='simple-brand-row' style='justify-content:{align_css};'>"
-        f"<div class='simple-logo' style='min-width:{logo_w}px;height:{logo_h}px;'>{logo_a}</div>"
-        f"<div class='simple-logo' style='min-width:{logo_w}px;height:{logo_h}px;'>{logo_b}</div>"
+        f"<div class='simple-logo' style='{logo_a_style}'>{logo_a}</div>"
+        f"<div class='simple-logo' style='{logo_b_style}'>{logo_b}</div>"
         "</div>"
         f"<div class='simple-brand-row' style='justify-content:{align_css};'>"
-        f"<div class='simple-pic' style='min-width:{pic_w}px;height:{pic_h}px;'>{pic}</div>"
+        f"<div class='simple-pic' style='{pic_style}'>{pic}</div>"
         "</div>"
         "</div>"
     )
@@ -156,13 +233,26 @@ def _base_layout(
     stamp_cycle: int,
     stamp_batch: int,
     rng: random.Random,
-    bg: str = "#edf1f7",
+    bg: str | None = None,
 ) -> str:
     branding_location, branding_html = _branding_block_html(rng, stamp_cycle, stamp_batch)
     branding_top = branding_html if branding_location == "top" else ""
     branding_bottom = branding_html if branding_location == "bottom" else ""
     hero_note_align = rng.choice(["left", "center", "justify"])
     tok = _style_tokens(rng)
+    page_bg = bg if (bg and rng.random() < 0.35) else str(tok["page_bg"])
+    use_standard_doc = rng.random() < 0.55
+    footer_align = rng.choice(["left", "center", "justify"])
+    footer_html = ""
+    if use_standard_doc:
+        footer_html = (
+            f"<footer class='doc-footer align-{footer_align}'>"
+            f"Doc {rng.randint(1000, 9999)}-{rng.randint(10, 99)} "
+            f"| revision {rng.randint(1, 12)} "
+            f"| page 1 of 1"
+            "</footer>"
+        )
+    page_class = "page page-doc" if use_standard_doc else "page"
     return f"""
 <!DOCTYPE html>
 <html>
@@ -171,13 +261,17 @@ def _base_layout(
   <style>
     :root {{
       --accent: {accent};
-      --ink: #1a2433;
-      --muted: #5e6b7e;
+      --ink: {tok['ink']};
+      --muted: {tok['muted']};
       --line: {tok['line_color']};
       --line-soft: {tok['line_soft']};
       --line-strong: {tok['line_strong']};
-      --surface: #ffffff;
-      --bg: {bg};
+      --surface: {tok['surface']};
+      --bg: {page_bg};
+      --panel-bg: {tok['panel_bg']};
+      --hero-bg: {tok['hero_bg']};
+      --table-bg: {tok['table_bg']};
+      --th-bg: {tok['th_bg']};
     }}
     * {{ box-sizing: border-box; }}
     body {{
@@ -222,7 +316,7 @@ def _base_layout(
     .branding {{
       border: {tok['panel_border']}px {tok['panel_style']} var(--line);
       border-radius: {tok['panel_radius']}px;
-      background: #f6faff;
+      background: var(--panel-bg);
       padding: 8px 10px;
       margin: 6px 0 10px;
       display: grid;
@@ -265,6 +359,11 @@ def _base_layout(
       align-items: center;
       justify-content: center;
       text-transform: uppercase;
+      text-align: center;
+      padding: 2px 6px;
+      line-height: 1.1;
+      white-space: normal;
+      word-break: break-word;
     }}
     .hero-row {{
       display: grid;
@@ -275,12 +374,12 @@ def _base_layout(
     }}
     .hero-card {{
       border: {tok['panel_border']}px {tok['panel_style']} var(--line);
-      background: #f7faff;
+      background: var(--hero-bg);
       border-radius: {tok['hero_radius']}px;
       padding: {tok['hero_pad_v']}px {tok['hero_pad_h']}px;
     }}
     .bulky-label {{
-      color: #5f6e82;
+      color: var(--muted);
       font-size: {tok['th_font']}px;
       letter-spacing: 0.5px;
       text-transform: uppercase;
@@ -291,10 +390,10 @@ def _base_layout(
       line-height: 0.95;
       font-weight: {tok['bulky_weight']};
       letter-spacing: {tok['bulky_letter_spacing']};
-      color: #1f2f47;
+      color: var(--ink);
     }}
     .break-note {{
-      color: #3c4c65;
+      color: var(--ink);
       font-size: {tok['break_note_size']}px;
       line-height: {tok['break_note_line']};
       font-weight: 600;
@@ -317,6 +416,11 @@ def _base_layout(
       display: flex;
       align-items: center;
       justify-content: center;
+      text-align: center;
+      padding: 4px 8px;
+      line-height: 1.1;
+      white-space: normal;
+      word-break: break-word;
     }}
     .picture-box.sm {{
       min-width: {tok['pic_sm_w']}px;
@@ -374,15 +478,15 @@ def _base_layout(
     table {{
       width: 100%;
       border-collapse: collapse;
-      background: #fbfcff;
+      background: var(--table-bg);
       border: {tok['table_border']}px {tok['table_style']} var(--line);
       border-radius: {tok['panel_radius']}px;
       overflow: hidden;
       font-size: {tok['table_font']}px;
     }}
     th {{
-      background: #f2f6fd;
-      color: #2f3f58;
+      background: var(--th-bg);
+      color: var(--ink);
       font-size: {tok['th_font']}px;
       text-transform: uppercase;
       letter-spacing: {tok['th_letter_spacing']};
@@ -463,7 +567,7 @@ def _base_layout(
     .bulk-panel {{
       border: {tok['panel_border']}px {tok['panel_style']} var(--line);
       border-radius: {tok['panel_radius']}px;
-      background: #f8fbff;
+      background: var(--panel-bg);
       padding: 8px 10px;
     }}
     .bulk-kicker {{
@@ -488,13 +592,51 @@ def _base_layout(
     }}
     .foot-note {{
       margin-top: 8px;
-      color: #6b778b;
+      color: var(--muted);
       font-size: {tok['detail_font']}px;
+    }}
+    .text-wall {{
+      border: {tok['panel_border']}px {tok['panel_style']} var(--line-soft);
+      border-radius: {tok['panel_radius']}px;
+      background: var(--panel-bg);
+      padding: 9px 11px;
+    }}
+    .text-wall-kicker {{
+      color: var(--muted);
+      font-size: {tok['bulk_kicker_size']}px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }}
+    .text-wall p {{
+      margin: 0 0 7px;
+      font-size: {tok['bulk_note_size']}px;
+      line-height: {tok['bulk_note_line']};
+      color: var(--ink);
+      text-align: justify;
+    }}
+    .text-wall p:last-child {{
+      margin-bottom: 0;
+    }}
+    .doc-body {{
+      display: grid;
+      gap: {tok['layout_gap']}px;
+    }}
+    .doc-footer {{
+      margin-top: 10px;
+      border-top: {tok['panel_border']}px {tok['rule_style']} var(--line);
+      padding-top: 8px;
+      color: var(--muted);
+      font-size: {tok['detail_font']}px;
+      text-transform: uppercase;
+      letter-spacing: 0.35px;
+      font-weight: 700;
     }}
   </style>
 </head>
 <body>
-  <div class="page">
+  <div class="{page_class}">
     <div class="header">
       <div>
         <h1>{title}</h1>
@@ -502,21 +644,24 @@ def _base_layout(
       </div>
     </div>
     {branding_top}
-    <div class="hero-row">
-      <div class="hero-card">
-        <div class="bulky-label">Portfolio Index</div>
-        <div class="bulky-text">{stamp_cycle + stamp_batch}</div>
+    <main class="doc-body">
+      <div class="hero-row">
+        <div class="hero-card">
+          <div class="bulky-label">Portfolio Index</div>
+          <div class="bulky-text">{stamp_cycle + stamp_batch}</div>
+        </div>
+        <div class="hero-card break-note align-{hero_note_align}">
+          Regional planning cycle<br />
+          includes legal, finance,<br />
+          reliability, and brand ops.
+        </div>
       </div>
-      <div class="hero-card break-note align-{hero_note_align}">
-        Regional planning cycle<br />
-        includes legal, finance,<br />
-        reliability, and brand ops.
+      <div class="layout">
+        {body}
       </div>
-    </div>
-    <div class="layout">
-      {body}
-    </div>
+    </main>
     {branding_bottom}
+    {footer_html}
   </div>
 </body>
 </html>

@@ -27,7 +27,8 @@ def _write_sample(output_dir: Path, sample_id: str, template: str, html: str) ->
     html_path = sample_dir / "source.html"
     png_path = sample_dir / "render.png"
     html_path.write_text(html, encoding="utf-8")
-    render_html_to_image(html).save(png_path)
+    # Synthetic pages can exceed viewport height; capture full page to avoid clipping.
+    render_html_to_image(html, full_page=True).save(png_path)
 
     return {
         "sample_id": sample_id,

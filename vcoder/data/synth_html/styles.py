@@ -29,6 +29,60 @@ def _style_tokens(rng: random.Random) -> dict[str, int | str]:
         low = max(lo, 2 if style == "double" else lo)
         return rng.randint(low, hi)
 
+    themes = [
+        {
+            "page_bg": "#eef3fb",
+            "surface": "#ffffff",
+            "ink": "#1a2433",
+            "muted": "#5e6b7e",
+            "panel_bg": "#f7faff",
+            "hero_bg": "#f6faff",
+            "table_bg": "#fbfcff",
+            "th_bg": "#f2f6fd",
+        },
+        {
+            "page_bg": "#f4f0ed",
+            "surface": "#fffdfb",
+            "ink": "#2b1f19",
+            "muted": "#726056",
+            "panel_bg": "#fff7f2",
+            "hero_bg": "#fff4ec",
+            "table_bg": "#fffdfa",
+            "th_bg": "#f8ebe0",
+        },
+        {
+            "page_bg": "#edf4ef",
+            "surface": "#fbfffc",
+            "ink": "#182c23",
+            "muted": "#4f6d61",
+            "panel_bg": "#f1fbf4",
+            "hero_bg": "#ecf8ef",
+            "table_bg": "#fafffb",
+            "th_bg": "#e5f3e8",
+        },
+        {
+            "page_bg": "#f3eef8",
+            "surface": "#fffdff",
+            "ink": "#231a34",
+            "muted": "#665a7e",
+            "panel_bg": "#f8f2ff",
+            "hero_bg": "#f5ecff",
+            "table_bg": "#fcf9ff",
+            "th_bg": "#efe6fb",
+        },
+        {
+            "page_bg": "#fff7e8",
+            "surface": "#fffdf8",
+            "ink": "#2f2512",
+            "muted": "#756649",
+            "panel_bg": "#fff8e9",
+            "hero_bg": "#fff3dc",
+            "table_bg": "#fffefb",
+            "th_bg": "#f9ebc9",
+        },
+    ]
+    theme = rng.choice(themes)
+
     return {
         "font_family": rng.choice(
             [
@@ -58,6 +112,14 @@ def _style_tokens(rng: random.Random) -> dict[str, int | str]:
         "line_color": line_color,
         "line_soft": line_soft,
         "line_strong": line_strong,
+        "page_bg": theme["page_bg"],
+        "surface": theme["surface"],
+        "ink": theme["ink"],
+        "muted": theme["muted"],
+        "panel_bg": theme["panel_bg"],
+        "hero_bg": theme["hero_bg"],
+        "table_bg": theme["table_bg"],
+        "th_bg": theme["th_bg"],
         "page_style": page_style,
         "panel_style": panel_style,
         "table_style": table_style,

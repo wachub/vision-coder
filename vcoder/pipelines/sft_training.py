@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 from dataclasses import dataclass
+from pathlib import Path
 
 import torch
 from transformers import (
@@ -102,8 +103,11 @@ def parse_args() -> argparse.Namespace:
     # Model / data
     p.add_argument("--model_id", default="Qwen/Qwen3-VL-2B-Instruct")
     p.add_argument("--dataset_dir", default="assets/synth_samples")
+    p.add_argument("--train_dataset_dir", type=str, default=None)
+    p.add_argument("--eval_dataset_dir", type=str, default=None)
     p.add_argument("--output_dir", default="outputs/vcoder-sft-synth")
     p.add_argument("--max_samples", type=int, default=200)
+    p.add_argument("--max_eval_samples", type=int, default=None)
     p.add_argument("--max_width", type=int, default=512)
     p.add_argument("--seed", type=int, default=42)
 
@@ -180,29 +184,49 @@ def _load_model_with_attn_fallback(
         return model, "sdpa"
 
 
-def main() -> None:
-    args = parse_args()
-
-    if args.max_samples <= 0:
-        raise ValueError("--max_samples must be > 0")
-    if args.max_length <= 0:
-        raise ValueError("--max_length must be > 0")
-
-    dataset = load_synthetic_sft_dataset(
-        dataset_dir=args.dataset_dir,
+def _load_train_eval_datasets(args: argparse.Namespace):
+    train_dataset_dir = Path(args.train_dataset_dir) if args.train_dataset_dir else Path(args.dataset_dir)
+    train_dataset = load_synthetic_sft_dataset(
+        dataset_dir=train_dataset_dir,
         max_samples=args.max_samples,
         seed=args.seed,
         max_width=args.max_width,
     )
 
     eval_dataset = None
-    train_dataset = dataset
-    if 0.0 < args.eval_ratio < 1.0 and len(dataset) > 1:
-        split = dataset.train_test_split(test_size=args.eval_ratio, seed=args.seed)
+    if args.eval_dataset_dir:
+        eval_max_samples = args.max_eval_samples if args.max_eval_samples is not None else args.max_samples
+        eval_dataset = load_synthetic_sft_dataset(
+            dataset_dir=Path(args.eval_dataset_dir),
+            max_samples=eval_max_samples,
+            seed=args.seed + 1,
+            max_width=args.max_width,
+        )
+    elif 0.0 < args.eval_ratio < 1.0 and len(train_dataset) > 1:
+        split = train_dataset.train_test_split(test_size=args.eval_ratio, seed=args.seed)
         train_dataset = split["train"]
         eval_dataset = split["test"]
 
-    print(f"Loaded synthetic samples: {len(dataset)}")
+    return train_dataset, eval_dataset, train_dataset_dir
+
+
+def main() -> None:
+    args = parse_args()
+
+    if args.max_samples <= 0:
+        raise ValueError("--max_samples must be > 0")
+    if args.max_eval_samples is not None and args.max_eval_samples <= 0:
+        raise ValueError("--max_eval_samples must be > 0 when set")
+    if args.max_length <= 0:
+        raise ValueError("--max_length must be > 0")
+
+    train_dataset, eval_dataset, train_dataset_dir = _load_train_eval_datasets(args)
+
+    print(f"Train dataset dir: {train_dataset_dir}")
+    if args.eval_dataset_dir:
+        print(f"Eval dataset dir:  {args.eval_dataset_dir}")
+    else:
+        print(f"Eval split ratio:  {args.eval_ratio}")
     print(f"Train samples: {len(train_dataset)}")
     print(f"Eval samples: {len(eval_dataset) if eval_dataset is not None else 0}")
 

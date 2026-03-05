@@ -5,7 +5,6 @@ from typing import Optional
 import numpy as np
 import torch
 from PIL import Image
-from skimage.metrics import structural_similarity as ssim
 from transformers import CLIPModel, CLIPProcessor
 
 
@@ -20,12 +19,8 @@ def _get_clip(device: str = "cpu"):
     """Lazy-load and cache the CLIP model and processor."""
     global _clip_model, _clip_processor
     if _clip_model is None:
-        _clip_processor = CLIPProcessor.from_pretrained(
-            CLIP_MODEL_NAME, use_fast=True, local_files_only=True,
-        )
-        _clip_model = CLIPModel.from_pretrained(
-            CLIP_MODEL_NAME, local_files_only=True,
-        ).to(device).eval()
+        _clip_processor = CLIPProcessor.from_pretrained(CLIP_MODEL_NAME, use_fast=True)
+        _clip_model = CLIPModel.from_pretrained(CLIP_MODEL_NAME).to(device).eval()
     return _clip_model, _clip_processor
 
 
@@ -47,6 +42,13 @@ def compute_ssim(
 
     Returns a float in [0, 1] where 1 means identical.
     """
+    try:
+        from skimage.metrics import structural_similarity as ssim
+    except ModuleNotFoundError as exc:
+        raise RuntimeError(
+            "compute_ssim requires scikit-image. Install with: pip install scikit-image"
+        ) from exc
+
     a = np.array(resize_for_comparison(img_a, size), dtype=np.float64)
     b = np.array(resize_for_comparison(img_b, size), dtype=np.float64)
     ssim_score = ssim(a, b, channel_axis=2, data_range=255)

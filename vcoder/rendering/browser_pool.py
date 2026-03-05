@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import os
 from typing import Optional
 
 from playwright.async_api import async_playwright, Browser
@@ -39,7 +38,14 @@ class BrowserPool:
             args=["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage"],
         )
 
-    async def render(self, html: str, width: int = 1280, height: int = 1024, timeout_ms: int = 5000) -> bytes | None:
+    async def render(
+        self,
+        html: str,
+        width: int = 1280,
+        height: int = 1024,
+        timeout_ms: int = 5000,
+        full_page: bool = False,
+    ) -> bytes | None:
         """Render HTML string to a PNG screenshot.
 
         Returns PNG bytes, or None on failure/timeout.
@@ -49,7 +55,7 @@ class BrowserPool:
             try:
                 page = await self._browser.new_page(viewport={"width": width, "height": height})
                 await page.set_content(html, wait_until="networkidle", timeout=timeout_ms)
-                screenshot = await page.screenshot(type="png", full_page=False)
+                screenshot = await page.screenshot(type="png", full_page=full_page)
                 return screenshot
             except Exception:
                 return None

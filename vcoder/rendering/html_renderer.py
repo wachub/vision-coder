@@ -17,12 +17,17 @@ def _blank_white_image(width: int = 512, height: int = 512) -> Image.Image:
     return Image.new("RGB", (width, height), (255, 255, 255))
 
 
-async def _render_html_async(html: str) -> Image.Image:
+async def _render_html_async(
+    html: str,
+    width: int = 1280,
+    height: int = 1024,
+    full_page: bool = False,
+) -> Image.Image:
     """Render HTML to a PIL Image using the browser pool."""
     pool = await BrowserPool.get_instance()
-    png_bytes = await pool.render(html)
+    png_bytes = await pool.render(html, width=width, height=height, full_page=full_page)
     if png_bytes is None:
-        return _blank_white_image()
+        return _blank_white_image(width=width, height=height)
     return Image.open(io.BytesIO(png_bytes)).convert("RGB")
 
 
@@ -45,14 +50,22 @@ def _get_sync_loop() -> asyncio.AbstractEventLoop:
         return loop
 
 
-def render_html_to_image(html: str) -> Image.Image:
+def render_html_to_image(
+    html: str,
+    width: int = 1280,
+    height: int = 1024,
+    full_page: bool = False,
+) -> Image.Image:
     """Synchronous wrapper: render an HTML string to a PIL Image.
 
     Returns a blank white image on failure.
     """
     try:
         loop = _get_sync_loop()
-        future = asyncio.run_coroutine_threadsafe(_render_html_async(html), loop)
+        future = asyncio.run_coroutine_threadsafe(
+            _render_html_async(html, width=width, height=height, full_page=full_page),
+            loop,
+        )
         return future.result(timeout=20)
     except Exception:
-        return _blank_white_image()
+        return _blank_white_image(width=width, height=height)

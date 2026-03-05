@@ -8,6 +8,7 @@ from typing import Callable
 from .blocks import (
     _base_layout,
     _bulk_statement_html,
+    _bulk_text_wall_html,
     _nested_metrics_table,
     _nested_timeline_table,
     _simple_brand_block_html,
@@ -18,12 +19,24 @@ from .styles import _hex_color, _sample_list, _style_tokens
 TemplateFn = Callable[[random.Random], str]
 
 
+def _simple_footer_html(rng: random.Random) -> str:
+    return (
+        "<footer class='page-footer'>"
+        f"Doc {rng.randint(1000, 9999)}-{rng.randint(10, 99)} | "
+        f"batch {rng.randint(1, 40)} | "
+        f"rev {rng.randint(1, 12)}"
+        "</footer>"
+    )
+
+
 def _simple_dashboard_html(rng: random.Random) -> str:
     accent = _hex_color(rng)
     brand_pos, brand_html = _simple_brand_block_html(rng)
     brand_top = brand_html if brand_pos == "top" else ""
     brand_bottom = brand_html if brand_pos == "bottom" else ""
     tok = _style_tokens(rng)
+    text_wall = _bulk_text_wall_html(rng) if rng.random() < 0.6 else ""
+    footer_html = _simple_footer_html(rng) if rng.random() < 0.55 else ""
     cards = []
     for label in ["Users", "Orders", "Revenue", "Tickets"]:
         cards.append(
@@ -51,25 +64,34 @@ def _simple_dashboard_html(rng: random.Random) -> str:
   <meta charset="UTF-8" />
   <style>
     :root {{
+      --ink: {tok['ink']};
+      --muted: {tok['muted']};
       --line: {tok['line_color']};
       --line-soft: {tok['line_soft']};
       --line-strong: {tok['line_strong']};
+      --bg: {tok['page_bg']};
+      --surface: {tok['surface']};
+      --panel-bg: {tok['panel_bg']};
+      --hero-bg: {tok['hero_bg']};
+      --table-bg: {tok['table_bg']};
+      --th-bg: {tok['th_bg']};
     }}
-    body {{ margin: 0; font-family: {tok['font_family']}; font-size: {tok['base_font_size']}px; background: #f1f5fb; }}
-    .wrap {{ width: {tok['page_width']}px; margin: {tok['page_margin']}px auto; background: #fff; border: {tok['page_border']}px {tok['page_style']} var(--line); border-radius: {tok['page_radius']}px; padding: {tok['page_pad_v']}px {tok['page_pad_h']}px; }}
+    body {{ margin: 0; font-family: {tok['font_family']}; font-size: {tok['base_font_size']}px; color: var(--ink); background: var(--bg); }}
+    .wrap {{ width: {tok['page_width']}px; margin: {tok['page_margin']}px auto; background: var(--surface); border: {tok['page_border']}px {tok['page_style']} var(--line); border-radius: {tok['page_radius']}px; padding: {tok['page_pad_v']}px {tok['page_pad_h']}px; }}
+    .doc-body {{ display: grid; gap: {tok['layout_gap']}px; }}
     .align-left {{ text-align: left; }}
     .align-center {{ text-align: center; }}
     .align-justify {{ text-align: justify; }}
     .simple-brand {{
       border: {tok['panel_border']}px {tok['panel_style']} var(--line);
       border-radius: {tok['panel_radius']}px;
-      background: #f7faff;
+      background: var(--panel-bg);
       padding: {tok['hero_pad_v']}px {tok['hero_pad_h']}px;
       margin-bottom: 10px;
       display: grid;
       gap: {tok['branding_gap']}px;
     }}
-    .simple-brand-stamp {{ color: #4f607a; font-size: {tok['subtitle_size']}px; font-weight: {tok['h1_weight']}; letter-spacing: {tok['subtitle_letter_spacing']}; }}
+    .simple-brand-stamp {{ color: var(--muted); font-size: {tok['subtitle_size']}px; font-weight: {tok['h1_weight']}; letter-spacing: {tok['subtitle_letter_spacing']}; }}
     .simple-brand-row {{ display: flex; gap: {tok['branding_row_gap']}px; flex-wrap: wrap; }}
     .simple-logo, .simple-pic {{
       border: {tok['logo_border']}px {tok['logo_style']} var(--line-strong);
@@ -84,10 +106,14 @@ def _simple_dashboard_html(rng: random.Random) -> str:
       justify-content: center;
       padding: 0 8px;
       letter-spacing: {tok['logo_letter_spacing']};
+      text-align: center;
+      line-height: 1.1;
+      white-space: normal;
+      word-break: break-word;
     }}
     .top {{ display: flex; justify-content: space-between; gap: {tok['hero_gap']}px; margin-bottom: {tok['hero_margin_bottom']}px; }}
     .title {{ font-size: {tok['h1_size']}px; font-weight: {tok['h1_weight']}; letter-spacing: {tok['h1_letter_spacing']}; margin-bottom: 3px; }}
-    .subtitle {{ font-size: {tok['subtitle_size']}px; line-height: {tok['break_note_line']}; color: #56657c; letter-spacing: {tok['subtitle_letter_spacing']}; }}
+    .subtitle {{ font-size: {tok['subtitle_size']}px; line-height: {tok['break_note_line']}; color: var(--muted); letter-spacing: {tok['subtitle_letter_spacing']}; }}
     .logo-row {{ display: flex; gap: {tok['branding_row_gap']}px; }}
     .picture-box {{
       width: {tok['pic_sm_w']}px;
@@ -103,51 +129,93 @@ def _simple_dashboard_html(rng: random.Random) -> str:
       align-items: center;
       justify-content: center;
       letter-spacing: {tok['pic_letter_spacing']};
+      text-align: center;
+      line-height: 1.1;
+      white-space: normal;
+      word-break: break-word;
+      padding: 3px 8px;
     }}
     .hero {{
       border: {tok['panel_border']}px {tok['panel_style']} var(--line);
       border-radius: {tok['panel_radius']}px;
-      background: #f7faff;
+      background: var(--hero-bg);
       padding: {tok['hero_pad_v']}px {tok['hero_pad_h']}px;
       margin-bottom: 10px;
     }}
-    .hero-label {{ color: #5b6b82; font-size: {tok['th_font']}px; text-transform: uppercase; letter-spacing: {tok['th_letter_spacing']}; }}
-    .hero-value {{ font-size: {tok['bulky_size']}px; line-height: 0.95; font-weight: {tok['bulky_weight']}; letter-spacing: {tok['bulky_letter_spacing']}; color: #1f3048; }}
-    .hero-note {{ color: #4a5972; font-size: {tok['break_note_size']}px; line-height: {tok['break_note_line']}; font-weight: 600; }}
+    .hero-label {{ color: var(--muted); font-size: {tok['th_font']}px; text-transform: uppercase; letter-spacing: {tok['th_letter_spacing']}; }}
+    .hero-value {{ font-size: {tok['bulky_size']}px; line-height: 0.95; font-weight: {tok['bulky_weight']}; letter-spacing: {tok['bulky_letter_spacing']}; color: var(--ink); }}
+    .hero-note {{ color: var(--ink); font-size: {tok['break_note_size']}px; line-height: {tok['break_note_line']}; font-weight: 600; }}
     .cards {{ display: grid; grid-template-columns: repeat(4, 1fr); gap: {tok['layout_gap']}px; margin-bottom: {tok['section_margin_bottom'] + 6}px; }}
-    .card {{ border: {tok['panel_border']}px {tok['panel_style']} var(--line); border-top: {tok['panel_border'] + 2}px {tok['rule_style']} {accent}; border-radius: {tok['panel_radius']}px; padding: 10px; background: #fcfdff; }}
-    .label {{ color: #57657d; font-size: {tok['th_font']}px; }}
+    .card {{ border: {tok['panel_border']}px {tok['panel_style']} var(--line); border-top: {tok['panel_border'] + 2}px {tok['rule_style']} {accent}; border-radius: {tok['panel_radius']}px; padding: 10px; background: var(--surface); }}
+    .label {{ color: var(--muted); font-size: {tok['th_font']}px; }}
     .value {{ font-size: {max(22, int(tok['bulky_size']) - 16)}px; font-weight: {tok['h1_weight']}; margin: 5px 0; }}
-    .delta {{ color: #2f7e4f; font-size: {tok['subtitle_size']}px; }}
-    table {{ width: 100%; border-collapse: collapse; font-size: {tok['table_font']}px; }}
+    .delta {{ color: var(--ink); font-size: {tok['subtitle_size']}px; }}
+    table {{ width: 100%; border-collapse: collapse; font-size: {tok['table_font']}px; background: var(--table-bg); }}
     th, td {{ border: {tok['table_border']}px {tok['table_style']} var(--line); padding: {tok['cell_pad']}px; text-align: left; }}
-    th {{ background: #eff4fd; }}
+    th {{ background: var(--th-bg); }}
+    .text-wall {{
+      border: {tok['panel_border']}px {tok['panel_style']} var(--line-soft);
+      border-radius: {tok['panel_radius']}px;
+      background: var(--panel-bg);
+      padding: 9px 11px;
+    }}
+    .text-wall-kicker {{
+      color: var(--muted);
+      font-size: {tok['bulk_kicker_size']}px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }}
+    .text-wall p {{
+      margin: 0 0 7px;
+      font-size: {tok['bulk_note_size']}px;
+      line-height: {tok['bulk_note_line']};
+      color: var(--ink);
+      text-align: justify;
+    }}
+    .text-wall p:last-child {{ margin-bottom: 0; }}
+    .page-footer {{
+      margin-top: 10px;
+      border-top: {tok['panel_border']}px {tok['rule_style']} var(--line);
+      padding-top: 8px;
+      color: var(--muted);
+      font-size: {tok['detail_font']}px;
+      text-transform: uppercase;
+      letter-spacing: 0.35px;
+      font-weight: 700;
+      text-align: center;
+    }}
   </style>
 </head>
 <body>
   <div class="wrap">
     {brand_top}
-    <div class="top">
-      <div>
-        <div class="title">Weekly Snapshot {rng.randint(1, 52)}</div>
-        <div class="subtitle">Commercial dashboard<br />with brand and partner placeholders.</div>
+    <main class="doc-body">
+      <div class="top">
+        <div>
+          <div class="title">Weekly Snapshot {rng.randint(1, 52)}</div>
+          <div class="subtitle">Commercial dashboard<br />with brand and partner placeholders.</div>
+        </div>
+        <div class="logo-row">
+          <div class="picture-box">Company Logo</div>
+          <div class="picture-box">Partner Logo</div>
+        </div>
       </div>
-      <div class="logo-row">
-        <div class="picture-box">Company Logo</div>
-        <div class="picture-box">Partner Logo</div>
+      <div class="hero">
+        <div class="hero-label">Commercial Index</div>
+        <div class="hero-value">{rng.randint(1020, 9980)}</div>
+        <div class="hero-note">Demand trend remains elevated<br />across primary sales channels.</div>
       </div>
-    </div>
-    <div class="hero">
-      <div class="hero-label">Commercial Index</div>
-      <div class="hero-value">{rng.randint(1020, 9980)}</div>
-      <div class="hero-note">Demand trend remains elevated<br />across primary sales channels.</div>
-    </div>
-    <div class="cards">{''.join(cards)}</div>
-    <table>
-      <thead><tr><th>Region</th><th>Active Accounts</th><th>Conversion</th></tr></thead>
-      <tbody>{''.join(table_rows)}</tbody>
-    </table>
+      <div class="cards">{''.join(cards)}</div>
+      {text_wall}
+      <table>
+        <thead><tr><th>Region</th><th>Active Accounts</th><th>Conversion</th></tr></thead>
+        <tbody>{''.join(table_rows)}</tbody>
+      </table>
+    </main>
     {brand_bottom}
+    {footer_html}
   </div>
 </body>
 </html>
@@ -160,6 +228,8 @@ def _simple_pricing_html(rng: random.Random) -> str:
     brand_top = brand_html if brand_pos == "top" else ""
     brand_bottom = brand_html if brand_pos == "bottom" else ""
     tok = _style_tokens(rng)
+    text_wall = _bulk_text_wall_html(rng) if rng.random() < 0.55 else ""
+    footer_html = _simple_footer_html(rng) if rng.random() < 0.55 else ""
     prices = [rng.randint(9, 39), rng.randint(40, 99), rng.randint(100, 249)]
     return f"""
 <!DOCTYPE html>
@@ -168,25 +238,33 @@ def _simple_pricing_html(rng: random.Random) -> str:
   <meta charset="UTF-8" />
   <style>
     :root {{
+      --ink: {tok['ink']};
+      --muted: {tok['muted']};
       --line: {tok['line_color']};
       --line-soft: {tok['line_soft']};
       --line-strong: {tok['line_strong']};
+      --bg: {tok['page_bg']};
+      --surface: {tok['surface']};
+      --panel-bg: {tok['panel_bg']};
+      --hero-bg: {tok['hero_bg']};
+      --th-bg: {tok['th_bg']};
     }}
-    body {{ margin: 0; font-family: {tok['font_family']}; font-size: {tok['base_font_size']}px; background: #f6f7fb; }}
-    .wrap {{ width: {tok['page_width']}px; margin: {tok['page_margin']}px auto; background: #fff; border: {tok['page_border']}px {tok['page_style']} var(--line); border-radius: {tok['page_radius']}px; padding: {tok['page_pad_v']}px {tok['page_pad_h']}px; }}
+    body {{ margin: 0; font-family: {tok['font_family']}; font-size: {tok['base_font_size']}px; color: var(--ink); background: var(--bg); }}
+    .wrap {{ width: {tok['page_width']}px; margin: {tok['page_margin']}px auto; background: var(--surface); border: {tok['page_border']}px {tok['page_style']} var(--line); border-radius: {tok['page_radius']}px; padding: {tok['page_pad_v']}px {tok['page_pad_h']}px; }}
+    .doc-body {{ display: grid; gap: {tok['layout_gap']}px; }}
     .align-left {{ text-align: left; }}
     .align-center {{ text-align: center; }}
     .align-justify {{ text-align: justify; }}
     .simple-brand {{
       border: {tok['panel_border']}px {tok['panel_style']} var(--line);
       border-radius: {tok['panel_radius']}px;
-      background: #f8fbff;
+      background: var(--panel-bg);
       padding: {tok['hero_pad_v']}px {tok['hero_pad_h']}px;
       margin-bottom: 10px;
       display: grid;
       gap: {tok['branding_gap']}px;
     }}
-    .simple-brand-stamp {{ color: #53637b; font-size: {tok['subtitle_size']}px; font-weight: {tok['h1_weight']}; letter-spacing: {tok['subtitle_letter_spacing']}; }}
+    .simple-brand-stamp {{ color: var(--muted); font-size: {tok['subtitle_size']}px; font-weight: {tok['h1_weight']}; letter-spacing: {tok['subtitle_letter_spacing']}; }}
     .simple-brand-row {{ display: flex; gap: {tok['branding_row_gap']}px; flex-wrap: wrap; }}
     .simple-logo, .simple-pic {{
       border: {tok['logo_border']}px {tok['logo_style']} var(--line-strong);
@@ -201,10 +279,14 @@ def _simple_pricing_html(rng: random.Random) -> str:
       justify-content: center;
       padding: 0 8px;
       letter-spacing: {tok['logo_letter_spacing']};
+      text-align: center;
+      line-height: 1.1;
+      white-space: normal;
+      word-break: break-word;
     }}
     .top {{ display: flex; justify-content: space-between; align-items: center; gap: {tok['hero_gap']}px; margin-bottom: {tok['hero_margin_bottom']}px; }}
     .title {{ font-size: {tok['h1_size']}px; font-weight: {tok['h1_weight']}; letter-spacing: {tok['h1_letter_spacing']}; text-align: left; margin-bottom: 2px; }}
-    .subtitle {{ color: #596882; font-size: {tok['subtitle_size']}px; line-height: {tok['break_note_line']}; letter-spacing: {tok['subtitle_letter_spacing']}; }}
+    .subtitle {{ color: var(--muted); font-size: {tok['subtitle_size']}px; line-height: {tok['break_note_line']}; letter-spacing: {tok['subtitle_letter_spacing']}; }}
     .logo-row {{ display: flex; gap: {tok['branding_row_gap']}px; }}
     .picture-box {{
       width: {tok['pic_sm_w']}px;
@@ -220,68 +302,110 @@ def _simple_pricing_html(rng: random.Random) -> str:
       align-items: center;
       justify-content: center;
       letter-spacing: {tok['pic_letter_spacing']};
+      text-align: center;
+      line-height: 1.1;
+      white-space: normal;
+      word-break: break-word;
+      padding: 3px 8px;
     }}
     .hero {{
       border: {tok['panel_border']}px {tok['panel_style']} var(--line);
       border-radius: {tok['panel_radius']}px;
-      background: #f9fbff;
+      background: var(--hero-bg);
       padding: {tok['hero_pad_v']}px {tok['hero_pad_h']}px;
       margin-bottom: 10px;
     }}
-    .hero-label {{ color: #627189; font-size: {tok['th_font']}px; text-transform: uppercase; letter-spacing: {tok['th_letter_spacing']}; }}
-    .hero-value {{ font-size: {tok['bulky_size']}px; line-height: 0.95; font-weight: {tok['bulky_weight']}; letter-spacing: {tok['bulky_letter_spacing']}; color: #1e2f47; }}
-    .hero-note {{ color: #4d5d76; font-size: {tok['break_note_size']}px; line-height: {tok['break_note_line']}; font-weight: 600; }}
+    .hero-label {{ color: var(--muted); font-size: {tok['th_font']}px; text-transform: uppercase; letter-spacing: {tok['th_letter_spacing']}; }}
+    .hero-value {{ font-size: {tok['bulky_size']}px; line-height: 0.95; font-weight: {tok['bulky_weight']}; letter-spacing: {tok['bulky_letter_spacing']}; color: var(--ink); }}
+    .hero-note {{ color: var(--ink); font-size: {tok['break_note_size']}px; line-height: {tok['break_note_line']}; font-weight: 600; }}
     .cards {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: {tok['layout_gap']}px; }}
-    .card {{ border: {tok['panel_border']}px {tok['panel_style']} var(--line); border-radius: {tok['panel_radius']}px; padding: 14px; background: #fcfdff; text-align: center; }}
+    .card {{ border: {tok['panel_border']}px {tok['panel_style']} var(--line); border-radius: {tok['panel_radius']}px; padding: 14px; background: var(--surface); text-align: center; }}
     .pro {{ border: {tok['panel_border'] + 1}px {tok['rule_style']} {accent}; }}
     .name {{ font-size: {max(16, int(tok['h1_size']) - 14)}px; font-weight: {tok['h1_weight']}; }}
     .price {{ font-size: {max(30, int(tok['bulky_size']) - 6)}px; font-weight: {tok['bulky_weight']}; margin: 8px 0; }}
-    .line {{ color: #5f6c80; margin: 5px 0; font-size: {tok['subtitle_size']}px; }}
+    .line {{ color: var(--muted); margin: 5px 0; font-size: {tok['subtitle_size']}px; }}
     .btn {{ margin-top: 8px; display: inline-block; border-radius: {tok['pill_radius']}px; background: {accent}; color: #fff; padding: 8px 14px; font-size: 13px; }}
+    .text-wall {{
+      border: {tok['panel_border']}px {tok['panel_style']} var(--line-soft);
+      border-radius: {tok['panel_radius']}px;
+      background: var(--panel-bg);
+      padding: 9px 11px;
+    }}
+    .text-wall-kicker {{
+      color: var(--muted);
+      font-size: {tok['bulk_kicker_size']}px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }}
+    .text-wall p {{
+      margin: 0 0 7px;
+      font-size: {tok['bulk_note_size']}px;
+      line-height: {tok['bulk_note_line']};
+      color: var(--ink);
+      text-align: justify;
+    }}
+    .text-wall p:last-child {{ margin-bottom: 0; }}
+    .page-footer {{
+      margin-top: 10px;
+      border-top: {tok['panel_border']}px {tok['rule_style']} var(--line);
+      padding-top: 8px;
+      color: var(--muted);
+      font-size: {tok['detail_font']}px;
+      text-transform: uppercase;
+      letter-spacing: 0.35px;
+      font-weight: 700;
+      text-align: center;
+    }}
   </style>
 </head>
 <body>
   <div class="wrap">
     {brand_top}
-    <div class="top">
-      <div>
-        <div class="title">Simple Pricing {rng.randint(2026, 2032)}</div>
-        <div class="subtitle">Plan lineup with logo placeholders<br />and bold conversion headline.</div>
+    <main class="doc-body">
+      <div class="top">
+        <div>
+          <div class="title">Simple Pricing {rng.randint(2026, 2032)}</div>
+          <div class="subtitle">Plan lineup with logo placeholders<br />and bold conversion headline.</div>
+        </div>
+        <div class="logo-row">
+          <div class="picture-box">Company Mark</div>
+          <div class="picture-box">Reseller Mark</div>
+        </div>
       </div>
-      <div class="logo-row">
-        <div class="picture-box">Company Mark</div>
-        <div class="picture-box">Reseller Mark</div>
+      <div class="hero">
+        <div class="hero-label">Quarterly ARR Projection</div>
+        <div class="hero-value">${rng.randint(120, 980)}K</div>
+        <div class="hero-note">Promotion burst starts next cycle<br />for Pro and Scale packages.</div>
       </div>
-    </div>
-    <div class="hero">
-      <div class="hero-label">Quarterly ARR Projection</div>
-      <div class="hero-value">${rng.randint(120, 980)}K</div>
-      <div class="hero-note">Promotion burst starts next cycle<br />for Pro and Scale packages.</div>
-    </div>
-    <div class="cards">
-      <div class="card">
-        <div class="name">Starter</div>
-        <div class="price">${prices[0]}</div>
-        <div class="line">{rng.randint(3, 20)} projects</div>
-        <div class="line">{rng.randint(10, 160)} GB storage</div>
-        <div class="btn">Choose</div>
+      <div class="cards">
+        <div class="card">
+          <div class="name">Starter</div>
+          <div class="price">${prices[0]}</div>
+          <div class="line">{rng.randint(3, 20)} projects</div>
+          <div class="line">{rng.randint(10, 160)} GB storage</div>
+          <div class="btn">Choose</div>
+        </div>
+        <div class="card pro">
+          <div class="name">Pro</div>
+          <div class="price">${prices[1]}</div>
+          <div class="line">{rng.randint(21, 80)} projects</div>
+          <div class="line">{rng.randint(180, 900)} GB storage</div>
+          <div class="btn">Choose</div>
+        </div>
+        <div class="card">
+          <div class="name">Scale</div>
+          <div class="price">${prices[2]}</div>
+          <div class="line">{rng.randint(81, 240)} projects</div>
+          <div class="line">{rng.randint(1, 8)} TB storage</div>
+          <div class="btn">Choose</div>
+        </div>
       </div>
-      <div class="card pro">
-        <div class="name">Pro</div>
-        <div class="price">${prices[1]}</div>
-        <div class="line">{rng.randint(21, 80)} projects</div>
-        <div class="line">{rng.randint(180, 900)} GB storage</div>
-        <div class="btn">Choose</div>
-      </div>
-      <div class="card">
-        <div class="name">Scale</div>
-        <div class="price">${prices[2]}</div>
-        <div class="line">{rng.randint(81, 240)} projects</div>
-        <div class="line">{rng.randint(1, 8)} TB storage</div>
-        <div class="btn">Choose</div>
-      </div>
-    </div>
+      {text_wall}
+    </main>
     {brand_bottom}
+    {footer_html}
   </div>
 </body>
 </html>

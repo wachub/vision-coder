@@ -14,7 +14,10 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
+import json
+import math
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 
 import torch
@@ -135,6 +138,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--resume_from_checkpoint", type=str, default=None)
     p.add_argument("--eval_ratio", type=float, default=0.05)
     p.add_argument("--eval_steps", type=int, default=100)
+    p.add_argument("--training_summary_path", type=str, default=None)
 
     return p.parse_args()
 
@@ -210,6 +214,62 @@ def _load_train_eval_datasets(args: argparse.Namespace):
     return train_dataset, eval_dataset, train_dataset_dir
 
 
+def _extract_train_losses(log_history: list[dict]) -> list[float]:
+    losses: list[float] = []
+    for item in log_history:
+        if not isinstance(item, dict):
+            continue
+        if "loss" not in item:
+            continue
+        value = item["loss"]
+        if isinstance(value, (int, float)) and math.isfinite(float(value)):
+            losses.append(float(value))
+    return losses
+
+
+def _write_training_summary(
+    path: Path,
+    args: argparse.Namespace,
+    train_dataset_dir: Path,
+    train_samples: int,
+    eval_samples: int,
+    has_cuda: bool,
+    model_dtype: torch.dtype,
+    resolved_attn_backend: str | None,
+    loaded_attn_backend: str | None,
+    use_lora: bool,
+    trainer: Trainer,
+    train_result,
+) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    train_losses = _extract_train_losses(getattr(trainer.state, "log_history", []))
+    summary = {
+        "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+        "model_id": args.model_id,
+        "output_dir": str(args.output_dir),
+        "train_dataset_dir": str(train_dataset_dir),
+        "eval_dataset_dir": str(args.eval_dataset_dir) if args.eval_dataset_dir else None,
+        "train_samples": train_samples,
+        "eval_samples": eval_samples,
+        "max_steps_requested": args.max_steps,
+        "num_train_epochs_requested": args.num_train_epochs,
+        "global_step": int(getattr(trainer.state, "global_step", 0)),
+        "has_cuda": has_cuda,
+        "dtype": str(model_dtype),
+        "attn_backend_requested": args.attn_backend,
+        "attn_backend_resolved": resolved_attn_backend or "cpu-default",
+        "attn_backend_loaded": loaded_attn_backend or "cpu-default",
+        "use_lora": use_lora,
+        "train_loss_points": train_losses,
+        "num_train_loss_points": len(train_losses),
+        "last_train_loss": train_losses[-1] if train_losses else None,
+        "training_loss": float(getattr(train_result, "training_loss", 0.0)),
+        "train_metrics": getattr(train_result, "metrics", {}),
+    }
+    path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    print(f"Wrote training summary: {path}")
+
+
 def main() -> None:
     args = parse_args()
 
@@ -252,7 +312,8 @@ def main() -> None:
     )
     print(f"Loaded model attention backend: {loaded_attn_backend or 'cpu-default'}")
 
-    if not args.no_lora:
+    use_lora = not args.no_lora
+    if use_lora:
         try:
             from peft import LoraConfig, get_peft_model
         except ModuleNotFoundError as exc:
@@ -298,9 +359,25 @@ def main() -> None:
         data_collator=collator,
     )
 
-    trainer.train(resume_from_checkpoint=args.resume_from_checkpoint)
+    train_result = trainer.train(resume_from_checkpoint=args.resume_from_checkpoint)
     trainer.save_model(args.output_dir)
     processor.save_pretrained(args.output_dir)
+
+    if args.training_summary_path:
+        _write_training_summary(
+            path=Path(args.training_summary_path),
+            args=args,
+            train_dataset_dir=train_dataset_dir,
+            train_samples=len(train_dataset),
+            eval_samples=len(eval_dataset) if eval_dataset is not None else 0,
+            has_cuda=has_cuda,
+            model_dtype=model_dtype,
+            resolved_attn_backend=resolved_attn_backend,
+            loaded_attn_backend=loaded_attn_backend,
+            use_lora=use_lora,
+            trainer=trainer,
+            train_result=train_result,
+        )
     print(f"SFT training complete. Saved to {args.output_dir}")
 
 

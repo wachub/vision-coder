@@ -169,6 +169,22 @@ python -m vcoder.eval.compare_synthetic_reports \
     --output outputs/synth_eval/compare_base_vs_sft.json
 ```
 
+### Training Integrity Smoke Check
+
+If visual eval is currently failing (`num_success=0`), use this to verify that SFT itself is updating LoRA weights:
+
+```bash
+# 1) Create tiny synthetic data + split (single command)
+python -m vcoder.data.generate_synthetic_html --num_samples 12 --output_dir outputs/sft_verify/synth_source && \
+python -m vcoder.data.synth_html.prepare_sft_splits --source_dir outputs/sft_verify/synth_source --output_root outputs/sft_verify/synth_split --val_ratio 0.2
+
+# 2) Run SFT integrity verifier (runs tiny training + checks artifacts)
+python -m vcoder.eval.verify_sft_updates --source_dir outputs/sft_verify/synth_source --work_dir outputs/sft_verify --max_steps 5 --keep_artifacts
+
+# 3) Inspect machine-readable verdict + metrics
+cat outputs/sft_verify/verification.json
+```
+
 ---
 
 ## Evaluation

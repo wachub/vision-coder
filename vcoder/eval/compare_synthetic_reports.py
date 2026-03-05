@@ -19,7 +19,7 @@ KEYS = (
 def _load_summary(path: Path) -> dict:
     if not path.exists():
         raise FileNotFoundError(f"Summary not found: {path}")
-    return json.loads(path.read_text(encoding="utf-8"))
+    return json.loads(path.read_text(encoding="utf-8-sig"))
 
 
 def _delta(after: float | int, before: float | int) -> float:

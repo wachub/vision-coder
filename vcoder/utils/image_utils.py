@@ -18,9 +18,14 @@ _clip_processor: Optional[CLIPProcessor] = None
 def _get_clip(device: str = "cpu"):
     """Lazy-load and cache the CLIP model and processor."""
     global _clip_model, _clip_processor
+    target_device = torch.device(device)
     if _clip_model is None:
         _clip_processor = CLIPProcessor.from_pretrained(CLIP_MODEL_NAME, use_fast=True)
-        _clip_model = CLIPModel.from_pretrained(CLIP_MODEL_NAME).to(device).eval()
+        _clip_model = CLIPModel.from_pretrained(CLIP_MODEL_NAME).to(target_device).eval()
+    else:
+        model_device = next(_clip_model.parameters()).device
+        if model_device != target_device:
+            _clip_model = _clip_model.to(target_device).eval()
     return _clip_model, _clip_processor
 
 
@@ -66,7 +71,8 @@ def compute_clip_similarity(
     Returns a float in [0, 1] where 1 means perceptually identical.
     """
     model, processor = _get_clip(device)
-    inputs = processor(images=[img_a.convert("RGB"), img_b.convert("RGB")], return_tensors="pt").to(device)
+    model_device = next(model.parameters()).device
+    inputs = processor(images=[img_a.convert("RGB"), img_b.convert("RGB")], return_tensors="pt").to(model_device)
     with torch.no_grad():
         feats = model.get_image_features(**inputs)
         feats = feats / feats.norm(dim=-1, keepdim=True)

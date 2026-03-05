@@ -75,6 +75,18 @@ def compute_clip_similarity(
     inputs = processor(images=[img_a.convert("RGB"), img_b.convert("RGB")], return_tensors="pt").to(model_device)
     with torch.no_grad():
         feats = model.get_image_features(**inputs)
+        if not isinstance(feats, torch.Tensor):
+            if hasattr(feats, "image_embeds") and feats.image_embeds is not None:
+                feats = feats.image_embeds
+            elif hasattr(feats, "pooler_output") and feats.pooler_output is not None:
+                feats = feats.pooler_output
+            elif isinstance(feats, (tuple, list)) and feats:
+                feats = feats[0]
+            else:
+                raise RuntimeError(
+                    "Unexpected CLIP get_image_features output type: "
+                    f"{type(feats)}"
+                )
         feats = feats / feats.norm(dim=-1, keepdim=True)
     score = (feats[0] @ feats[1]).item()
     # Clamp to [0, 1] (cosine sim can be slightly negative for very different images)
